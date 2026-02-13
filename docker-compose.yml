@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  mqttx-web:
+    image: emqx/mqttx-web:latest
+    container_name: mqttx-web
+    ports:
+      - "8081:80"
+    restart: unless-stopped

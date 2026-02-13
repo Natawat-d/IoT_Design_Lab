@@ -1,0 +1,147 @@
+#include <Arduino.h>
+
+// Pin definitions
+#define LED1 2              // LED1 connected to GPIO 2 (built-in, active LOW)
+#define LED2 4              // LED2 connected to GPIO 4
+#define LED3 5              // LED3 connected to GPIO 5
+#define SW2 12              // Switch 2 connected to GPIO 12
+#define SW3 13              // Switch 3 connected to GPIO 13
+#define POT_PIN 35          // Potentiometer connected to GPIO 35 (ADC)
+
+// State variables for switches
+int sw2State = 0;           // SW2 state: 0=OFF, 1=ON (toggles)
+int sw3State = 0;           // SW3 state: 0-6 (7 states total)
+
+// Debouncing variables
+bool lastSW2State = HIGH;
+bool lastSW3State = HIGH;
+unsigned long lastSW2PressTime = 0;
+unsigned long lastSW3PressTime = 0;
+const unsigned long debounceDelay = 200; // 200ms debounce
+
+// Timing for potentiometer reading
+unsigned long previousPotMillis = 0;
+const unsigned long POT_INTERVAL = 2000; // Read pot every 2 seconds
+
+void setup() {
+  // Initialize serial communication
+  Serial.begin(115200);
+  
+  // Initialize LED pins as output
+  pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
+  pinMode(LED3, OUTPUT);
+  
+  // Initialize switch pins as input with pull-up
+  pinMode(SW2, INPUT_PULLUP);
+  pinMode(SW3, INPUT_PULLUP);
+  
+  // Initialize all LEDs to OFF state
+  digitalWrite(LED1, HIGH);  
+  digitalWrite(LED2, HIGH);   
+  digitalWrite(LED3, HIGH);   
+  
+  Serial.println("System initialized.");
+  Serial.println("SW2: Toggle LED1 ON/OFF");
+  Serial.println("SW3: Cycle through 7 states (LED2/LED3)");
+  Serial.println("Potentiometer value displayed every 2 seconds");
+  Serial.println("Checking switch connections...");
+  Serial.print("SW2 initial state: ");
+  Serial.println(digitalRead(SW2) == HIGH ? "HIGH (not pressed)" : "LOW (pressed)");
+  Serial.print("SW3 initial state: ");
+  Serial.println(digitalRead(SW3) == HIGH ? "HIGH (not pressed)" : "LOW (pressed)");
+}
+
+void loop() {
+  unsigned long currentMillis = millis();
+  
+  // Read switch states (LOW = pressed with pull-up)
+  bool sw2Current = digitalRead(SW2);
+  bool sw3Current = digitalRead(SW3);
+  
+  // ===== SW2 Press Detection =====
+  if (sw2Current == LOW && lastSW2State == HIGH) {
+    // Button just pressed, check debounce
+    if (currentMillis - lastSW2PressTime > debounceDelay) {
+      lastSW2PressTime = currentMillis;
+      
+      // Toggle SW2 state
+      sw2State = (sw2State + 1) % 2;
+      
+      // Update LED1 based on state
+      if (sw2State == 1) {
+        digitalWrite(LED1, LOW);  // Active LOW - turn ON
+        Serial.println("SW2 Press: LED1 ON");
+      } else {
+        digitalWrite(LED1, HIGH); // Active LOW - turn OFF
+        Serial.println("SW2 Press: LED1 OFF");
+      }
+    }
+  }
+  lastSW2State = sw2Current;
+  
+  // ===== SW3 Press Detection =====
+  if (sw3Current == LOW && lastSW3State == HIGH) {
+    // Button just pressed, check debounce
+    if (currentMillis - lastSW3PressTime > debounceDelay) {
+      lastSW3PressTime = currentMillis;
+      
+      // Cycle through 7 states (0-6)
+      sw3State = (sw3State + 1) % 7;
+      
+      // Update LED2 and LED3 based on state
+      switch (sw3State) {
+        case 0: // 1st press: LED2 ON, LED3 OFF
+          digitalWrite(LED2, HIGH);
+          digitalWrite(LED3, LOW);
+          Serial.println("SW3 Press 1: LED2 ON, LED3 OFF");
+          break;
+        case 1: // 2nd press: LED2 OFF, LED3 OFF
+          digitalWrite(LED2, LOW);
+          digitalWrite(LED3, LOW);
+          Serial.println("SW3 Press 2: LED2 OFF, LED3 OFF");
+          break;
+        case 2: // 3rd press: LED2 OFF, LED3 ON
+          digitalWrite(LED2, LOW);
+          digitalWrite(LED3, HIGH);
+          Serial.println("SW3 Press 3: LED2 OFF, LED3 ON");
+          break;
+        case 3: // 4th press: LED2 OFF, LED3 OFF
+          digitalWrite(LED2, LOW);
+          digitalWrite(LED3, LOW);
+          Serial.println("SW3 Press 4: LED2 OFF, LED3 OFF");
+          break;
+        case 4: // 5th press: LED2 ON, LED3 ON
+          digitalWrite(LED2, HIGH);
+          digitalWrite(LED3, HIGH);
+          Serial.println("SW3 Press 5: LED2 ON, LED3 ON");
+          break;
+        case 5: // 6th press: LED2 OFF, LED3 OFF
+          digitalWrite(LED2, LOW);
+          digitalWrite(LED3, LOW);
+          Serial.println("SW3 Press 6: LED2 OFF, LED3 OFF");
+          break;
+        case 6: // 7th press: LED2 ON, LED3 OFF (cycle back)
+          digitalWrite(LED2, HIGH);
+          digitalWrite(LED3, LOW);
+          Serial.println("SW3 Press 7: LED2 ON, LED3 OFF (cycle restarts)");
+          break;
+      }
+    }
+  }
+  lastSW3State = sw3Current;
+  
+  // ===== Read Potentiometer Every 2 Seconds =====
+  if (currentMillis - previousPotMillis >= POT_INTERVAL) {
+    previousPotMillis = currentMillis;
+    
+    int potValue = analogRead(POT_PIN);
+    Serial.print("Potentiometer Value: ");
+    Serial.print(potValue);
+    Serial.print(" (");
+    Serial.print((potValue * 3.3) / 4095.0, 2);
+    Serial.println(" V)");
+  }
+  
+  // No delay - continuous non-blocking operation
+}

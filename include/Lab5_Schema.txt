@@ -1,0 +1,30 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "temperature": {
+      "type": "number",
+      "operation": {
+        "transform": {
+          "expression": "($.temperature * 1.8) + 32"
+        }
+      },
+      "ttl" : "7d"
+    },
+    "humidity": {
+      "type": "number",
+      "ttl": "7d"
+    },
+    "led1": {
+      "type": "boolean",
+      "ttl": "2d"
+    },
+    "led2": {
+      "type": "boolean",
+      "ttl": "2d"
+    },
+    "led3": {
+      "type": "boolean",
+      "ttl": "2d"
+    }
+  }
+}
